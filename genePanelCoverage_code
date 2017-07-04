@@ -1,0 +1,68 @@
+import csv
+# import requests from the API so that you get the status date for the CIPs
+import requests
+
+# define what the 'host' is so you can plug this into URLs
+host = "http://10.0.64.71"
+
+# so you don't show your password to the world, create a separate file, write your password in there, and then assign the file to a variable
+pw_file = 'my_password.txt'
+# you need to tell the console to go inside the pw_file and read (r) the password to input
+with open(pw_file, 'r') as f:
+    # password = the read of the pw_file
+    password = f.readline()
+
+# get your token to look at the requests. Note that the URL is plugging in 'host' from earlier.
+response = requests.post('{host}/api/get-token/'.format(host=host), {'username': 'oniblock', 'password': password})
+# the response from the above will be able to get you your token
+token = response.json()['token']
+
+response2 = requests.get('{host}/api/interpretationRequestsList/?page_size=4000&?minimize=True'.format(host=host), headers={"Authorization": "JWT " + token})
+
+IR_IDs = response2.json()
+interpretation_ids = []
+blocked_cases = []
+interpretation_ids2 = []
+# print IR_IDs
+
+for interpretation_request in IR_IDs['results']:
+    # print interpretation_request['last_status']
+    if interpretation_request['last_status'] == 'blocked':
+    #     print interpretation_request['interpretation_request_id']
+        blocked_cases.append(interpretation_request['interpretation_request_id'])
+    elif interpretation_request['last_status'] != 'blocked':
+        interpretation_ids2.append(interpretation_request['interpretation_request_id'])
+
+# print blocked_cases
+# print interpretation_ids2
+
+
+with open('missing_panel_coverage_data.csv', 'w') as f:
+    line_writer = csv.writer(f, delimiter=',')
+    cases_no_genePanelsCoverage = []
+    for case in interpretation_ids2:
+        request_id, version = case.split('-')
+        interpretation_request = requests.get('{host}/api/interpretationRequests/{request_id}/{version}/'.format(host=host, request_id=request_id, version=version), headers={'Authorization': "JWT " + token}).json()
+
+        missing_coverage_data = []
+        coverage_data_present = []
+
+        # print interpretation_request['interpretation_request_data']['json_request'].keys()
+        try:
+            data = interpretation_request['interpretation_request_data']['json_request']
+        except:
+            data = None
+        if data:
+            if "genePanelsCoverage" in data.keys():
+                if len(data["genePanelsCoverage"]) != 0:
+                    pass
+                else:
+                    print request_id, version, interpretation_request['last_status'], 'missing data...'
+                    line_writer.writerow([request_id, version, interpretation_request['last_status'], 'missing data'])
+            else:
+                print request_id, version, interpretation_request['last_status'], 'missing key...'
+                line_writer.writerow([request_id, version, interpretation_request['last_status'], 'missing key'])
+
+        else:
+            print request_id, version, interpretation_request['last_status'], 'does not exist'
+            line_writer.writerow([request_id, version, interpretation_request['last_status'], 'does not exist'])
