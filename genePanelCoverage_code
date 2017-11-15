@@ -3,7 +3,7 @@ import csv
 import requests
 
 # define what the 'host' is so you can plug this into URLs
-host = "http://10.0.64.71"
+host = "https://cipapi-prod.gel.zone"
 
 # so you don't show your password to the world, create a separate file, write your password in there, and then assign the file to a variable
 pw_file = 'my_password.txt'
@@ -17,7 +17,7 @@ response = requests.post('{host}/api/get-token/'.format(host=host), {'username':
 # the response from the above will be able to get you your token
 token = response.json()['token']
 
-response2 = requests.get('{host}/api/interpretationRequestsList/?page_size=4000&?minimize=True'.format(host=host), headers={"Authorization": "JWT " + token})
+response2 = requests.get('{host}/api/interpretationRequestsList/?page_size=5000&?minimize=True'.format(host=host), headers={"Authorization": "JWT " + token})
 
 IR_IDs = response2.json()
 interpretation_ids = []
